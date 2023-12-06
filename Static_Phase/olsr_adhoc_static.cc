@@ -53,6 +53,13 @@ int main (int argc, char *argv[])
     // Set static mobility for each node
     MobilityHelper mobility;
     mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+    Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
+	// Define node positions here
+	for (uint32_t i = 0; i < nodes.GetN(); ++i)
+	{
+	    positionAlloc->Add (Vector (5.0 * i, 5.0 * i, 0.0)); // in a diagonal line
+	}
+    mobility.SetPositionAllocator (positionAlloc);
     mobility.Install (nodes);
 
     // Install Internet stack and OLSR
@@ -81,7 +88,7 @@ int main (int argc, char *argv[])
     client.SetAttribute ("PacketSize", UintegerValue (1024));
 
     ApplicationContainer clientApps;
-    for (int i = 1; i < 5; ++i) {
+    for (uint32_t i = 1; i < nodes.GetN(); ++i) {
         clientApps.Add (client.Install (nodes.Get (i)));
     }
     clientApps.Start (Seconds (2.0));
