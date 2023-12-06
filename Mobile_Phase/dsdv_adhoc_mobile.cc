@@ -85,7 +85,7 @@ mobility.Install (nodes);
     client.SetAttribute ("PacketSize", UintegerValue (1024));
 
     ApplicationContainer clientApps;
-    for (int i = 1; i < 25; ++i) {
+    for (uint32_t i = 1; i < nodes.GetN(); ++i) {
         clientApps.Add (client.Install (nodes.Get (i)));
     }
     clientApps.Start (Seconds (2.0));
