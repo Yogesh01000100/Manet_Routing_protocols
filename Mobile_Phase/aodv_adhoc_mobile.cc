@@ -8,6 +8,19 @@
 #include "ns3/netanim-module.h"
 
 using namespace ns3;
+Time g_firstRxTime (Seconds (0));
+Time g_lastRxTime (Seconds (0));
+
+// Custom callback function
+void ReceivePacket (Ptr<const Packet> packet, const Address &)
+{
+    Time now = Simulator::Now ();
+    if (g_firstRxTime.IsZero ())
+    {
+        g_firstRxTime = now;
+    }
+    g_lastRxTime = now;
+}
 
 NS_LOG_COMPONENT_DEFINE ("AodvExample");
 uint32_t totalBytesReceived = 0;
@@ -88,17 +101,20 @@ mobility.Install (nodes);
     Simulator::Stop (Seconds (20.0));
 
     AnimationInterface anim("aodv_adhoc_mobile.xml");
+    
+    Ptr<PacketSink> sink = DynamicCast<PacketSink> (sinkApps.Get (0));
+    sink->TraceConnectWithoutContext ("Rx", MakeCallback (&ReceivePacket));
 
     Simulator::Run ();
-     Ptr<PacketSink> sink = DynamicCast<PacketSink> (sinkApps.Get (0));
+    //Ptr<PacketSink> sink = DynamicCast<PacketSink> (sinkApps.Get (0));
     uint32_t totalBytesReceived = sink->GetTotalRx ();
-    double simulationDuration = 20.0;
-    double throughput = (totalBytesReceived * 8.0) / (simulationDuration * 1024); // kbps
+    double actualDuration = g_lastRxTime.GetSeconds () - g_firstRxTime.GetSeconds ();
+    double throughput = (totalBytesReceived * 8.0) / (actualDuration * 1024); // kbps
 
+    std::cout << "Actual Simulation time: " << actualDuration << " secs " << std::endl;
     std::cout << "Total Bytes Received: " << totalBytesReceived << " bytes" << std::endl;
     std::cout << "Throughput: " << throughput << " kbps" << std::endl;
     Simulator::Destroy ();
     
     return 0;
 }
-

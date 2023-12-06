@@ -8,7 +8,19 @@
 #include "ns3/netanim-module.h"
 
 using namespace ns3;
+Time g_firstRxTime (Seconds (0));
+Time g_lastRxTime (Seconds (0));
 
+// Custom callback function
+void ReceivePacket (Ptr<const Packet> packet, const Address &)
+{
+    Time now = Simulator::Now ();
+    if (g_firstRxTime.IsZero ())
+    {
+        g_firstRxTime = now;
+    }
+    g_lastRxTime = now;
+}
 NS_LOG_COMPONENT_DEFINE ("OlsrExample");
 
 int main (int argc, char *argv[])
@@ -18,7 +30,7 @@ int main (int argc, char *argv[])
 
     // Create n nodes
     NodeContainer nodes;
-    nodes.Create (25);
+    nodes.Create (5);
 
     // Set up Wi-Fi devices and channel
     WifiHelper wifi;
@@ -72,7 +84,7 @@ mobility.Install (nodes);
     client.SetAttribute ("PacketSize", UintegerValue (1024));
 
     ApplicationContainer clientApps;
-    for (int i = 1; i < 25; ++i) {
+    for (int i = 1; i < 5; ++i) {
         clientApps.Add (client.Install (nodes.Get (i)));
     }
     clientApps.Start (Seconds (2.0));
@@ -86,17 +98,20 @@ mobility.Install (nodes);
 
     // Set up the animation interface
     AnimationInterface anim("olsr_adhoc_mobile.xml");
-
-    Simulator::Run ();
     Ptr<PacketSink> sink = DynamicCast<PacketSink> (sinkApps.Get (0));
+    sink->TraceConnectWithoutContext ("Rx", MakeCallback (&ReceivePacket));
+    
+    Simulator::Run ();
+    //Ptr<PacketSink> sink = DynamicCast<PacketSink> (sinkApps.Get (0));
     uint32_t totalBytesReceived = sink->GetTotalRx ();
-    double simulationDuration = 20.0;
-    double throughput = (totalBytesReceived * 8.0) / (simulationDuration * 1024); // kbps
 
+    double actualDuration = g_lastRxTime.GetSeconds () - g_firstRxTime.GetSeconds ();
+    double throughput = (totalBytesReceived * 8.0) / (actualDuration * 1024); // kbps
+    
+    std::cout << "Actual Simulation time: " << actualDuration << " secs " << std::endl;
     std::cout << "Total Bytes Received: " << totalBytesReceived << " bytes" << std::endl;
     std::cout << "Throughput: " << throughput << " kbps" << std::endl;
     Simulator::Destroy ();
     
     return 0;
 }
-
